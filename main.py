@@ -99,7 +99,7 @@ elif instruction & 0xf000 == 0xD000:
     x = (instruction & 0x0f00) >> 8
     y = (instruction & 0x00f0) >> 4
     n = instruction & 0x000F
-    vf = 0
+    registers[0xf] = 0
 
     for row in range(n):
         sprite_row = memory[I + row]
@@ -107,9 +107,10 @@ elif instruction & 0xf000 == 0xD000:
             pixel = (sprite_row >> (7 - bit)) & 0x01
             screen_x = (x + bit) % 64
             screen_y = (y + row) % 32
+            screen_idx = screen_y * 64 + screen_x
             if pixel:
-                if screen[screen_y][screen_x] == 1:
-                    vf = 1  # Pixel turned off
+                if screen[screen_idx] == 1:
+                    registers[0xf] = 1  # Pixel turned off
                 screen[screen_y][screen_x] ^= 1
 
 # skip if equal
@@ -180,21 +181,21 @@ elif instruction & 0xf00f == 0x8004:
     registers[x] = (registers[x] + registers[y])
 
     if registers[x] > 0xff:
-        vf = 1
+        registers[0xf] = 1
         registers[x] &= 0xff
     else:
-        vf = 0
+        registers[0xf] = 0
 
 # subtract value from two registers
 elif instruction & 0xf00f == 0x8005:
     x = (instruction & 0x0f00) >> 8
     y = (instruction & 0x00f0) >> 4
 
-    vf = 1
+    registers[0xf] = 1
 
     # set the carry bit to 0 if there is a underflow
     if registers[y] > registers[x]:
-        vf = 0
+        registers[0xf] = 0
 
     registers[x] = (registers[x] - registers[y]) & 0xff
 
@@ -202,14 +203,14 @@ elif instruction & 0xf00f == 0x8005:
 elif instruction & 0xf00f == 0x8006:
     x = (instruction & 0x0f00) >> 8
 
-    vf = registers[x] & 0x1
+    registers[0xf] = registers[x] & 0x1 # store the value in the flag register rather than variable
     registers[x] = registers[x] >> 1
 
 # shift to the left
 elif instruction & 0xf00f == 0x800E:
     x = (instruction & 0x0f00) >> 8
 
-    vf = (registers[x] & 0x80) >> 7  # Store the most significant bit in VF (carry flag)
+    registers[0xf] = (registers[x] & 0x80) >> 7  # Store the most significant bit in VF (carry flag)
     registers[x] = (registers[x] << 1) & 0xFF  # Shift left by 1, ensuring it stays 8-bit
 
 # jump with offset
