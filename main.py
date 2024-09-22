@@ -1,4 +1,6 @@
 import random
+import pygame
+
 
 # RAM of the emulator
 memory = [0] * 4096
@@ -17,6 +19,29 @@ stack = []
 
 # the program counter, starting in the memory address 0x200
 pc = 0x200
+
+delay_timer = 0
+sound_timer = 0
+
+# keyboad mapping to the COSMAC VIP keypad
+keyboad = {
+    pygame.K_1 : 0x1, 
+    pygame.K_2 : 0x2,
+    pygame.K_3 : 0x3,
+    pygame.K_4 : 0xc,
+    pygame.K_q : 0x4,
+    pygame.K_w : 0x5,
+    pygame.K_e : 0x6,
+    pygame.K_r : 0xd,
+    pygame.K_a : 0x7,
+    pygame.K_s : 0x8,
+    pygame.K_d : 0x9,
+    pygame.K_f : 0xe,
+    pygame.K_z : 0xa,
+    pygame.K_x : 0x0,
+    pygame.K_c : 0xb,
+    pygame.K_v : 0xf
+}
 
 # loading the ROM contents into the memory
 with open("romfile.bin", "rb") as file:
