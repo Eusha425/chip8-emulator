@@ -60,7 +60,7 @@ keyboad = {
 }
 
 # loading the ROM contents into the memory
-with open("test_opcode.ch8", "rb") as file:
+with open("IBM_logo.ch8", "rb") as file:
     rom = file.read() # read all the binary data
 
     for i in range(len(rom)):
