@@ -11,10 +11,10 @@ def draw_screen():
                 color = WHITE
             else:
                 color = BLACK
-                pygame.draw.rect(window, color, pygame.Rect(x * 10, y * 10, 10, 10))
+            pygame.draw.rect(window, color, pygame.Rect(x * 10, y * 10, 10, 10))
     pygame.display.update()
 
-
+# color values of the screen
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
@@ -60,14 +60,14 @@ keyboad = {
 }
 
 # loading the ROM contents into the memory
-with open("romfile.bin", "rb") as file:
+with open("test_opcode.ch8", "rb") as file:
     rom = file.read() # read all the binary data
 
     for i in range(len(rom)):
         memory [pc + i] = rom[i] # load each byte into the memory
 
 
-# font
+# font of CHIP-8
 font = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, # 0
 	0x20, 0x60, 0x20, 0x20, 0x70, # 1
@@ -110,7 +110,7 @@ while True:
     pc += 2
 
 
-    # decode instructions
+    # decode instructions & execute
 
     # jump
     if instruction & 0xf000 == 0x1000:
@@ -280,4 +280,17 @@ while True:
         random_num = (random.randint(0, 255)) & val 
 
         registers[x] = random_num
+
+    if delay_timer > 0:
+        delay_timer -= 1
+    if sound_timer > 0:
+        sound_timer -= 1
+        if sound_timer == 0:
+            print("BEEP")  # Placeholder for sound
+
+    clock.tick(60)  # Run at 60 frames per second
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            exit()
 
