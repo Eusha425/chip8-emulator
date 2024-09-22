@@ -1,6 +1,22 @@
 import random
 import pygame
 
+# function to render the screen
+def draw_screen():
+
+    for y in range(32):
+        for x in range(64):
+            # if 1 is found in the binary, set the screen color to white
+            if screen[y * 64 + x] == 1:
+                color = WHITE
+            else:
+                color = BLACK
+                pygame.draw.rect(window, color, pygame.Rect(x * 10, y * 10, 10, 10))
+    pygame.display.update()
+
+
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 
 # RAM of the emulator
 memory = [0] * 4096
@@ -75,6 +91,16 @@ font = [
 for i in range(len(font)):
     memory[0x50 + i] = font[i]
 
+# initialisation of the pygame object to render the screen and run the emulator
+pygame.init()
+# Set up display
+WIDTH, HEIGHT = 64 * 10, 32 * 10 # Scaled 10x
+
+window = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("CHIP-8 Emulator")
+clock = pygame.time.Clock()
+
+
 
 # fetch execute loop
 while True:
@@ -139,7 +165,8 @@ while True:
                 if pixel:
                     if screen[screen_idx] == 1:
                         registers[0xf] = 1  # Pixel turned off
-                    screen[screen_y][screen_x] ^= 1
+                    screen[screen_idx] ^= 1
+        draw_screen() # call the screen render function
 
     # skip if equal
     elif instruction & 0xf000 == 0x3000:
