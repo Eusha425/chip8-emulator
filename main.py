@@ -40,7 +40,7 @@ delay_timer = 0
 sound_timer = 0
 
 # keyboad mapping to the COSMAC VIP keypad
-keyboad = {
+keyboard = {
     pygame.K_1 : 0x1, 
     pygame.K_2 : 0x2,
     pygame.K_3 : 0x3,
@@ -280,6 +280,32 @@ while True:
         random_num = (random.randint(0, 255)) & val 
 
         registers[x] = random_num
+
+    # skip if key pressed
+    elif instruction & 0xf0ff == 0xe09e:
+        x = (instruction & 0x0f00) >> 8  
+        events = pygame.event.get()
+        for event in events:
+            # check if there is a key press
+            if event.type == pygame.KEYDOWN:
+                # Check if the key matches the Chip-8 keypad
+                if event.key in keyboard:
+                    if keyboard[event.key] == registers[x]:
+                        pc += 4
+            
+    
+    # skip if key not pressed
+    elif instruction & 0xf0ff == 0xe0a1:
+        x = (instruction & 0x0f00) >> 8  # Get the register X
+        key_value = registers[x]  # Get the value stored in the register X
+
+        keys_pressed = pygame.key.get_pressed()  # Get the state of all keys
+
+        # Check if the key corresponding to the value in registers[x] is not pressed
+        if keyboard[key_value] not in keyboard or not keys_pressed[keyboard[key_value]]:
+            pc += 4
+
+
 
     if delay_timer > 0:
         delay_timer -= 1
