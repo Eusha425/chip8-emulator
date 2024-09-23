@@ -60,7 +60,7 @@ keyboard = {
 }
 
 # loading the ROM contents into the memory
-with open("IBM_logo.ch8", "rb") as file:
+with open("test_opcode.ch8", "rb") as file:
     rom = file.read() # read all the binary data
 
     for i in range(len(rom)):
@@ -150,8 +150,10 @@ while True:
 
     # display / draw
     elif instruction & 0xf000 == 0xD000:
-        x = (instruction & 0x0f00) >> 8
-        y = (instruction & 0x00f0) >> 4
+        # ensuring using values from the registers and not just simply getting it from the opcode, thanks to chatgpt for helping with this!!!
+        x = registers[(instruction & 0x0F00) >> 8]
+        y = registers[(instruction & 0x00F0) >> 4]
+
         n = instruction & 0x000F
         registers[0xf] = 0
 
@@ -293,7 +295,6 @@ while True:
                     if keyboard[event.key] == registers[x]:
                         pc += 4
             
-    
     # skip if key not pressed
     elif instruction & 0xf0ff == 0xe0a1:
         x = (instruction & 0x0f00) >> 8  # Get the register X
