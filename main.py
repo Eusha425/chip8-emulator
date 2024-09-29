@@ -60,7 +60,7 @@ keyboard = {
 }
 
 # loading the ROM contents into the memory
-with open("test_opcode.ch8", "rb") as file:
+with open("IBM_logo.ch8", "rb") as file:
     rom = file.read() # read all the binary data
 
     for i in range(len(rom)):
@@ -306,6 +306,20 @@ while True:
         if keyboard[key_value] not in keyboard or not keys_pressed[keyboard[key_value]]:
             pc += 4
 
+    # set current value of delay timer
+    elif instruction & 0xf0ff == 0xf007:
+        x = (instruction & 0x0f00) >> 8 
+        registers[x] = delay_timer
+    
+    # set delay timer
+    elif instruction & 0xf0ff == 0xf015:
+        x = (instruction & 0x0f00) >> 8
+        delay_timer = registers[x]
+
+    # set sound timer
+    elif instruction & 0xf0ff == 0xf018:
+        x = (instruction & 0x0f00) >> 8
+        sound_timer = registers[x]
 
 
     if delay_timer > 0:
