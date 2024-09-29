@@ -60,7 +60,7 @@ keyboard = {
 }
 
 # loading the ROM contents into the memory
-with open("IBM_logo.ch8", "rb") as file:
+with open("3-corax+.ch8", "rb") as file:
     rom = file.read() # read all the binary data
 
     for i in range(len(rom)):
@@ -320,6 +320,58 @@ while True:
     elif instruction & 0xf0ff == 0xf018:
         x = (instruction & 0x0f00) >> 8
         sound_timer = registers[x]
+    
+    # add value to the index register
+    elif instruction & 0xf0ff == 0xf01e:
+        x = (instruction & 0x0f00) >> 8
+        I += registers[x]
+
+    # block until key press
+    elif instruction & 0xf0ff == 0xf00a:
+        x = (instruction & 0x0f00) >> 8  
+        events = pygame.event.get()
+
+        key_pressed = False
+        for event in events:
+            # check if key press
+            if event.type == pygame.KEYDOWN:
+                # check if the key pressed exists in the chip 8 keyboard
+                if event.key in keyboard:
+                    registers[x] = keyboard[event.key]  # Store the key in Vx
+                    key_pressed = True
+
+        if not key_pressed:
+            pc -= 2  # Stay on the same instruction if no key is pressed
+
+    # set I to a hex character
+    elif instruction & 0xf0ff == 0xf029:
+        x = (instruction & 0x0f00) >> 8
+        I = 0x50 + (registers[x] * 5)  # each sprite is 5 bytes long
+
+    # Binary coded decimal conversion
+    elif instruction & 0xf0ff == 0xf033:
+        x = (instruction & 0x0f00) >> 8
+        val = registers[x]
+        hundreds = val // 100
+        tens = (val // 10) % 10
+        ones = val % 10
+        memory[I] = hundreds
+        memory[I+1] = tens
+        memory[I+2] = ones
+
+    # store memory
+    elif instruction & 0xf0ff == 0xf055:
+        x = (instruction & 0x0f00) >> 8
+        for i in range(x + 1): # loop through all the xth registers, x inclusive
+            val = registers[i]
+            memory[I + i] = val # store value in memory
+
+    # load from memory
+    elif instruction & 0xf0ff == 0xf065:
+        x = (instruction & 0x0f00) >> 8
+        for i in range(x + 1): # loop through all the xth registers, x inclusive
+            val = memory[I + i]
+            registers[i] = val
 
 
     if delay_timer > 0:
