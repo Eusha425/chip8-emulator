@@ -1,5 +1,6 @@
 import random
 import pygame
+import numpy as np
 
 # function to render the screen
 def draw_screen():
@@ -100,7 +101,24 @@ window = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("CHIP-8 Emulator")
 clock = pygame.time.Clock()
 
+# initialise the sound
+pygame.mixer.init(frequency=44100, size=-16, channels=2)
 
+# Generate a simple sine wave for the beep
+duration = 0.1  # Duration of the beep in seconds
+frequency = 440  # Frequency of the beep in Hz (A4 note)
+sample_rate = 44100
+t = np.linspace(0, duration, int(sample_rate * duration), False)
+beep_wave = np.sin(2 * np.pi * frequency * t)
+
+# Convert to 16-bit PCM
+beep_wave = (beep_wave * 32767).astype(np.int16)
+
+# Make it stereo by duplicating the mono channel
+beep_stereo = np.column_stack((beep_wave, beep_wave))
+
+# Create a Pygame Sound object from the numpy array
+beep = pygame.sndarray.make_sound(beep_stereo)
 
 # fetch execute loop
 while True:
@@ -263,6 +281,19 @@ while True:
         registers[0xf] = registers[x] & 0x1 # store the value in the flag register rather than variable
         registers[x] = registers[x] >> 1
 
+    # subtract value from two registers
+    elif instruction & 0xf00f == 0x8007:
+        x = (instruction & 0x0f00) >> 8
+        y = (instruction & 0x00f0) >> 4
+
+        registers[0xf] = 1
+
+        # set the carry bit to 0 if there is a underflow
+        if registers[y] > registers[x]:
+            registers[0xf] = 0
+
+        registers[x] = (registers[y] - registers[x]) & 0xff
+
     # shift to the left
     elif instruction & 0xf00f == 0x800E:
         x = (instruction & 0x0f00) >> 8
@@ -379,6 +410,7 @@ while True:
     if sound_timer > 0:
         sound_timer -= 1
         if sound_timer == 0:
+            beep.play()
             print("BEEP")  # Placeholder for sound
 
     clock.tick(60)  # Run at 60 frames per second
