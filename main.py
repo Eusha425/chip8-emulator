@@ -138,7 +138,7 @@ while True:
     # call subroutine
     elif instruction & 0xf000 == 0x2000:
         address = instruction & 0x0fff
-        stack.append(pc + 2)
+        stack.append(pc)
         pc = address
 
     # clear screen
@@ -194,7 +194,7 @@ while True:
         val = instruction & 0x00ff
 
         if registers[x] == val:
-            pc+=4
+            pc+=2
 
     # skip if not equal
     elif instruction & 0xf000 == 0x4000:
@@ -202,7 +202,7 @@ while True:
         val = instruction & 0x00ff
 
         if registers[x] != val:
-            pc += 4
+            pc += 2
 
     # skip if value in 2 registers equal
     elif instruction & 0xf00f == 0x5000:
@@ -210,7 +210,7 @@ while True:
         y = (instruction & 0x00f0) >> 4
 
         if registers[x] == registers[y]:
-            pc += 4
+            pc += 2
 
     # skip if value in 2 registers are not equal
     elif instruction & 0xf00f == 0x9000:
@@ -218,7 +218,7 @@ while True:
         y = (instruction & 0x00f0) >> 4
 
         if registers[x] != registers[y]:
-            pc += 4
+            pc += 2
 
     # set value of one register to another
     elif instruction & 0xf00f == 0x8000:
@@ -324,7 +324,7 @@ while True:
                 # Check if the key matches the Chip-8 keypad
                 if event.key in keyboard:
                     if keyboard[event.key] == registers[x]:
-                        pc += 4
+                        pc += 2
             
     # skip if key not pressed
     elif instruction & 0xf0ff == 0xe0a1:
@@ -335,7 +335,7 @@ while True:
 
         # Check if the key corresponding to the value in registers[x] is not pressed
         if keyboard[key_value] not in keyboard or not keys_pressed[keyboard[key_value]]:
-            pc += 4
+            pc += 2
 
     # set current value of delay timer
     elif instruction & 0xf0ff == 0xf007:
