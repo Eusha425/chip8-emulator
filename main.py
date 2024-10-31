@@ -61,7 +61,7 @@ keyboard = {
 }
 
 # loading the ROM contents into the memory
-with open("5-quirks.ch8", "rb") as file:
+with open("7-beep.ch8", "rb") as file:
     rom = file.read() # read all the binary data
 
     for i in range(len(rom)):
@@ -325,26 +325,34 @@ while True:
 
     # skip if key pressed
     elif instruction & 0xf0ff == 0xe09e:
-        x = (instruction & 0x0f00) >> 8  
-        events = pygame.event.get()
-        for event in events:
-            # check if there is a key press
-            if event.type == pygame.KEYDOWN:
-                # Check if the key matches the Chip-8 keypad
-                if event.key in keyboard:
-                    if keyboard[event.key] == registers[x]:
-                        pc += 2
+        x = (instruction & 0x0f00) >> 8
+        key_value = registers[x]
+        keys = pygame.key.get_pressed()
+        
+        # Find the pygame key corresponding to the CHIP-8 key value
+        corresponding_pygame_key = None
+        for pygame_key, chip8_key in keyboard.items():
+            if chip8_key == key_value:
+                corresponding_pygame_key = pygame_key
+                break
+        
+        if corresponding_pygame_key and keys[corresponding_pygame_key]:
+            pc += 2
             
     # skip if key not pressed
     elif instruction & 0xf0ff == 0xe0a1:
-        x = (instruction & 0x0f00) >> 8  # Get the register X
-        key_value = registers[x]  # Get the value stored in the register X
-
-        keys_pressed = pygame.key.get_pressed()  # Get the state of all keys
-
-        # Use .get() to avoid KeyError
-        mapped_key = keyboard.get(key_value)
-        if mapped_key is None or not keys_pressed[mapped_key]:
+        x = (instruction & 0x0f00) >> 8
+        key_value = registers[x]
+        keys = pygame.key.get_pressed()
+        
+        # Find the pygame key corresponding to the CHIP-8 key value
+        corresponding_pygame_key = None
+        for pygame_key, chip8_key in keyboard.items():
+            if chip8_key == key_value:
+                corresponding_pygame_key = pygame_key
+                break
+        
+        if not corresponding_pygame_key or not keys[corresponding_pygame_key]:
             pc += 2
 
     # set current value of delay timer
@@ -369,18 +377,16 @@ while True:
 
     # block until key press
     elif instruction & 0xf0ff == 0xf00a:
-        x = (instruction & 0x0f00) >> 8  
-        events = pygame.event.get()
-
+        x = (instruction & 0x0f00) >> 8
+        keys = pygame.key.get_pressed()
+        
         key_pressed = False
-        for event in events:
-            # check if key press
-            if event.type == pygame.KEYDOWN:
-                # check if the key pressed exists in the chip 8 keyboard
-                if event.key in keyboard:
-                    registers[x] = keyboard[event.key]  # Store the key in Vx
-                    key_pressed = True
-
+        for pygame_key, chip8_key in keyboard.items():
+            if keys[pygame_key]:
+                registers[x] = chip8_key
+                key_pressed = True
+                break
+        
         if not key_pressed:
             pc -= 2  # Stay on the same instruction if no key is pressed
 
@@ -421,7 +427,6 @@ while True:
         sound_timer -= 1
         if sound_timer == 0:
             beep.play()
-            print("BEEP")  # Placeholder for sound
 
     clock.tick(60)  # Run at 60 frames per second
     for event in pygame.event.get():
