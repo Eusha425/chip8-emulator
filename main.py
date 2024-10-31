@@ -61,7 +61,7 @@ keyboard = {
 }
 
 # loading the ROM contents into the memory
-with open("3-corax+.ch8", "rb") as file:
+with open("5-quirks.ch8", "rb") as file:
     rom = file.read() # read all the binary data
 
     for i in range(len(rom)):
@@ -266,33 +266,42 @@ while True:
         x = (instruction & 0x0f00) >> 8
         y = (instruction & 0x00f0) >> 4
 
-        registers[0xf] = 1
+        vx = registers[x]
+        vy = registers[y]
 
-        # set the carry bit to 0 if there is a underflow
-        if registers[y] > registers[x]:
-            registers[0xf] = 0
+        # Perform the subtraction and store the result in vx
+        registers[x] = (vx - vy) & 0xff
 
-        registers[x] = (registers[x] - registers[y]) & 0xff
+        # Set the carry flag to 0 if there is an underflow
+        if vx >= vy:
+            registers[0xf] = 1  # No underflow
+        else:
+            registers[0xf] = 0  # Underflow occurred        
 
     # shift to the right
     elif instruction & 0xf00f == 0x8006:
         x = (instruction & 0x0f00) >> 8
-
-        registers[0xf] = registers[x] & 0x1 # store the value in the flag register rather than variable
-        registers[x] = registers[x] >> 1
+            
+        # Capture the least significant bit of VX before shifting
+        registers[0xf] = registers[x] & 0x1
+        
+        # Perform the shift
+        registers[x] >>= 1
 
     # subtract value from two registers
     elif instruction & 0xf00f == 0x8007:
         x = (instruction & 0x0f00) >> 8
         y = (instruction & 0x00f0) >> 4
 
-        registers[0xf] = 1
-
-        # set the carry bit to 0 if there is a underflow
-        if registers[y] > registers[x]:
-            registers[0xf] = 0
-
+        # Perform the subtraction
         registers[x] = (registers[y] - registers[x]) & 0xff
+
+        # Set the carry flag after the calculation
+        # If VY > VX, set VF to 1 (no underflow), otherwise set VF to 0 (underflow)
+        if registers[y] > registers[x]:
+            registers[0xf] = 1
+        else:
+            registers[0xf] = 0
 
     # shift to the left
     elif instruction & 0xf00f == 0x800E:
@@ -333,8 +342,9 @@ while True:
 
         keys_pressed = pygame.key.get_pressed()  # Get the state of all keys
 
-        # Check if the key corresponding to the value in registers[x] is not pressed
-        if keyboard[key_value] not in keyboard or not keys_pressed[keyboard[key_value]]:
+        # Use .get() to avoid KeyError
+        mapped_key = keyboard.get(key_value)
+        if mapped_key is None or not keys_pressed[mapped_key]:
             pc += 2
 
     # set current value of delay timer
