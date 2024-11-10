@@ -61,7 +61,7 @@ keyboard = {
 }
 
 # loading the ROM contents into the memory
-with open("7-beep.ch8", "rb") as file:
+with open("5-quirks.ch8", "rb") as file:
     rom = file.read() # read all the binary data
 
     for i in range(len(rom)):
@@ -234,6 +234,9 @@ while True:
 
         registers[x] = registers[x] | registers[y]
 
+        # reset flag
+        registers[0xf] = 0
+
     # binary AND
     elif instruction & 0xf00f == 0x8002:
         x = (instruction & 0x0f00) >> 8
@@ -241,12 +244,18 @@ while True:
 
         registers[x] = registers[x] & registers[y]
 
+        # reset flag
+        registers[0xf] = 0
+
     # logical XOR
     elif instruction & 0xf00f == 0x8003:
         x = (instruction & 0x0f00) >> 8
         y = (instruction & 0x00f0) >> 4
 
         registers[x] = registers[x] ^ registers[y]
+
+        # reset flag
+        registers[0xf] = 0
 
     # add value to register VX with overflow
     elif instruction & 0xf00f == 0x8004:
