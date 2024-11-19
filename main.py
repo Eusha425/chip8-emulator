@@ -90,7 +90,7 @@ font = [
 
 # load font into memory
 for i in range(len(font)):
-    memory[0x50 + i] = font[i]
+    memory[0x50 + i] = font[i] # load memory from the address 0x50 as per the docs
 
 # initialisation of the pygame object to render the screen and run the emulator
 pygame.init()
@@ -288,14 +288,15 @@ while True:
             registers[0xf] = 0  # Underflow occurred        
 
     # shift to the right
-    elif instruction & 0xf00f == 0x8006:
-        x = (instruction & 0x0f00) >> 8
-            
-        # Capture the least significant bit of VX before shifting
-        registers[0xf] = registers[x] & 0x1
+    elif (instruction & 0xF00F) == 0x8006:
+        x = (instruction & 0x0F00) >> 8
+        y = (instruction & 0x00F0) >> 4  # Add this line to get Y
         
-        # Perform the shift
-        registers[x] >>= 1
+        # Capture the least significant bit of VY before shifting
+        registers[0xF] = registers[y] & 0x1
+        
+        # Store shifted value of VY in VX
+        registers[x] = (registers[y] >> 1) & 0xFF
 
     # subtract value from two registers
     elif instruction & 0xf00f == 0x8007:
@@ -314,10 +315,14 @@ while True:
 
     # shift to the left
     elif instruction & 0xf00f == 0x800E:
-        x = (instruction & 0x0f00) >> 8
-
-        registers[0xf] = (registers[x] & 0x80) >> 7  # Store the most significant bit in VF (carry flag)
-        registers[x] = (registers[x] << 1) & 0xFF  # Shift left by 1, ensuring it stays 8-bit
+        x = (instruction & 0x0F00) >> 8
+        y = (instruction & 0x00F0) >> 4  # Add this line to get Y
+        
+        # Store the most significant bit in VF (carry flag)
+        registers[0xF] = (registers[y] & 0x80) >> 7
+        
+        # Store shifted value of VY in VX
+        registers[x] = (registers[y] << 1) & 0xFF
 
     # jump with offset
     elif instruction & 0xf000 == 0xb000:
@@ -421,6 +426,8 @@ while True:
         for i in range(x + 1): # loop through all the xth registers, x inclusive
             val = registers[i]
             memory[I + i] = val # store value in memory
+        
+        I = I + x + 1 # increment the index register
 
     # load from memory
     elif instruction & 0xf0ff == 0xf065:
@@ -428,6 +435,8 @@ while True:
         for i in range(x + 1): # loop through all the xth registers, x inclusive
             val = memory[I + i]
             registers[i] = val
+
+        I = I + x + 1 # increment the index register
 
 
     if delay_timer > 0:
