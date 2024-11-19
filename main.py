@@ -61,7 +61,7 @@ keyboard = {
 }
 
 # loading the ROM contents into the memory
-with open("5-quirks.ch8", "rb") as file:
+with open("6-keypad.ch8", "rb") as file:
     rom = file.read() # read all the binary data
 
     for i in range(len(rom)):
@@ -393,16 +393,24 @@ while True:
     elif instruction & 0xf0ff == 0xf00a:
         x = (instruction & 0x0f00) >> 8
         keys = pygame.key.get_pressed()
-        
+
         key_pressed = False
         for pygame_key, chip8_key in keyboard.items():
             if keys[pygame_key]:
                 registers[x] = chip8_key
                 key_pressed = True
                 break
-        
-        if not key_pressed:
+
+        # If a key is pressed, wait until it is released
+        if key_pressed:
+            waiting_for_release = True
+            while waiting_for_release:
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYUP:
+                        waiting_for_release = False
+        else:
             pc -= 2  # Stay on the same instruction if no key is pressed
+
 
     # set I to a hex character
     elif instruction & 0xf0ff == 0xf029:
