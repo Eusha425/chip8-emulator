@@ -120,331 +120,332 @@ beep_stereo = np.column_stack((beep_wave, beep_wave))
 # Create a Pygame Sound object from the numpy array
 beep = pygame.sndarray.make_sound(beep_stereo)
 
+instructions_per_frame = 10  # load multiple instructions per frame for faster performance
+
 # fetch execute loop
 while True:
+    for _ in range(instructions_per_frame):
+        # Fetch, decode, and execute one instruction
+        instruction = (memory[pc] << 8) | memory[pc + 1]
+        pc += 2
 
-    # fetch instructions
-    instruction = (memory[pc] << 8) | memory[pc + 1]
-    pc += 2
+        # decode instructions & execute
 
+        # jump
+        if instruction & 0xf000 == 0x1000:
+            address = instruction & 0x0fff
+            pc = address
 
-    # decode instructions & execute
+        # call subroutine
+        elif instruction & 0xf000 == 0x2000:
+            address = instruction & 0x0fff
+            stack.append(pc)
+            pc = address
 
-    # jump
-    if instruction & 0xf000 == 0x1000:
-        address = instruction & 0x0fff
-        pc = address
+        # clear screen
+        elif instruction & 0xffff == 0x00e0:
+            screen = [0] * (64 * 32)
 
-    # call subroutine
-    elif instruction & 0xf000 == 0x2000:
-        address = instruction & 0x0fff
-        stack.append(pc)
-        pc = address
+        # return
+        elif instruction & 0xf0ff == 0x00ee:
+            pc = stack.pop()
 
-    # clear screen
-    elif instruction & 0xffff == 0x00e0:
-        screen = [0] * (64 * 32)
+        # set value to register VX
+        elif instruction & 0xf000 == 0x6000:
+            x = (instruction & 0x0f00) >> 8
+            val = instruction & 0x00ff
+            registers[x] = val
 
-    # return
-    elif instruction & 0xf0ff == 0x00ee:
-        pc = stack.pop()
+        # add value to register VX
+        elif instruction & 0xf000 == 0x7000:
+            x = (instruction & 0x0f00) >> 8
+            val = instruction & 0x00ff
+            registers[x] = (registers[x] + val) & 0xff
 
-    # set value to register VX
-    elif instruction & 0xf000 == 0x6000:
-        x = (instruction & 0x0f00) >> 8
-        val = instruction & 0x00ff
-        registers[x] = val
+        # set index register I
+        elif instruction & 0xf000 == 0xA000:
+            val = instruction & 0x0fff
+            I = val
 
-    # add value to register VX
-    elif instruction & 0xf000 == 0x7000:
-        x = (instruction & 0x0f00) >> 8
-        val = instruction & 0x00ff
-        registers[x] = (registers[x] + val) & 0xff
+        # display / draw
+        elif instruction & 0xf000 == 0xD000:
+            # ensuring using values from the registers and not just simply getting it from the opcode, thanks to chatgpt for helping with this!!!
+            x = registers[(instruction & 0x0F00) >> 8]
+            y = registers[(instruction & 0x00F0) >> 4]
 
-    # set index register I
-    elif instruction & 0xf000 == 0xA000:
-        val = instruction & 0x0fff
-        I = val
-
-    # display / draw
-    elif instruction & 0xf000 == 0xD000:
-        # ensuring using values from the registers and not just simply getting it from the opcode, thanks to chatgpt for helping with this!!!
-        x = registers[(instruction & 0x0F00) >> 8]
-        y = registers[(instruction & 0x00F0) >> 4]
-
-        n = instruction & 0x000F
-        registers[0xf] = 0
-
-        for row in range(n):
-            sprite_row = memory[I + row]
-            for bit in range(8):
-                pixel = (sprite_row >> (7 - bit)) & 0x01
-                screen_x = (x + bit) % 64
-                screen_y = (y + row) % 32
-                screen_idx = screen_y * 64 + screen_x
-                if pixel:
-                    if screen[screen_idx] == 1:
-                        registers[0xf] = 1  # Pixel turned off
-                    screen[screen_idx] ^= 1
-        draw_screen() # call the screen render function
-
-    # skip if equal
-    elif instruction & 0xf000 == 0x3000:
-        x = (instruction & 0x0f00) >> 8
-        val = instruction & 0x00ff
-
-        if registers[x] == val:
-            pc+=2
-
-    # skip if not equal
-    elif instruction & 0xf000 == 0x4000:
-        x = (instruction & 0x0f00) >> 8
-        val = instruction & 0x00ff
-
-        if registers[x] != val:
-            pc += 2
-
-    # skip if value in 2 registers equal
-    elif instruction & 0xf00f == 0x5000:
-        x = (instruction & 0x0f00) >> 8
-        y = (instruction & 0x00f0) >> 4
-
-        if registers[x] == registers[y]:
-            pc += 2
-
-    # skip if value in 2 registers are not equal
-    elif instruction & 0xf00f == 0x9000:
-        x = (instruction & 0x0f00) >> 8
-        y = (instruction & 0x00f0) >> 4
-
-        if registers[x] != registers[y]:
-            pc += 2
-
-    # set value of one register to another
-    elif instruction & 0xf00f == 0x8000:
-        x = (instruction & 0x0f00) >> 8
-        y = (instruction & 0x00f0) >> 4
-
-        registers[x] = registers[y]
-
-    # binary OR
-    elif instruction & 0xf00f == 0x8001:
-        x = (instruction & 0x0f00) >> 8
-        y = (instruction & 0x00f0) >> 4
-
-        registers[x] = registers[x] | registers[y]
-
-        # reset flag
-        registers[0xf] = 0
-
-    # binary AND
-    elif instruction & 0xf00f == 0x8002:
-        x = (instruction & 0x0f00) >> 8
-        y = (instruction & 0x00f0) >> 4
-
-        registers[x] = registers[x] & registers[y]
-
-        # reset flag
-        registers[0xf] = 0
-
-    # logical XOR
-    elif instruction & 0xf00f == 0x8003:
-        x = (instruction & 0x0f00) >> 8
-        y = (instruction & 0x00f0) >> 4
-
-        registers[x] = registers[x] ^ registers[y]
-
-        # reset flag
-        registers[0xf] = 0
-
-    # add value to register VX with overflow
-    elif instruction & 0xf00f == 0x8004:
-        x = (instruction & 0x0f00) >> 8
-        y = (instruction & 0x00f0) >> 4
-        val = instruction & 0x00ff
-        registers[x] = (registers[x] + registers[y])
-
-        if registers[x] > 0xff:
-            registers[0xf] = 1
-            registers[x] &= 0xff
-        else:
+            n = instruction & 0x000F
             registers[0xf] = 0
 
-    # subtract value from two registers
-    elif instruction & 0xf00f == 0x8005:
-        x = (instruction & 0x0f00) >> 8
-        y = (instruction & 0x00f0) >> 4
+            for row in range(n):
+                sprite_row = memory[I + row]
+                for bit in range(8):
+                    pixel = (sprite_row >> (7 - bit)) & 0x01
+                    screen_x = (x + bit) % 64
+                    screen_y = (y + row) % 32
+                    screen_idx = screen_y * 64 + screen_x
+                    if pixel:
+                        if screen[screen_idx] == 1:
+                            registers[0xf] = 1  # Pixel turned off
+                        screen[screen_idx] ^= 1
+            draw_screen() # call the screen render function
 
-        vx = registers[x]
-        vy = registers[y]
+        # skip if equal
+        elif instruction & 0xf000 == 0x3000:
+            x = (instruction & 0x0f00) >> 8
+            val = instruction & 0x00ff
 
-        # Perform the subtraction and store the result in vx
-        registers[x] = (vx - vy) & 0xff
+            if registers[x] == val:
+                pc+=2
 
-        # Set the carry flag to 0 if there is an underflow
-        if vx >= vy:
-            registers[0xf] = 1  # No underflow
-        else:
-            registers[0xf] = 0  # Underflow occurred        
+        # skip if not equal
+        elif instruction & 0xf000 == 0x4000:
+            x = (instruction & 0x0f00) >> 8
+            val = instruction & 0x00ff
 
-    # shift to the right
-    elif (instruction & 0xF00F) == 0x8006:
-        x = (instruction & 0x0F00) >> 8
-        y = (instruction & 0x00F0) >> 4  # Add this line to get Y
-        
-        # Capture the least significant bit of VY before shifting
-        registers[0xF] = registers[y] & 0x1
-        
-        # Store shifted value of VY in VX
-        registers[x] = (registers[y] >> 1) & 0xFF
+            if registers[x] != val:
+                pc += 2
 
-    # subtract value from two registers
-    elif instruction & 0xf00f == 0x8007:
-        x = (instruction & 0x0f00) >> 8
-        y = (instruction & 0x00f0) >> 4
+        # skip if value in 2 registers equal
+        elif instruction & 0xf00f == 0x5000:
+            x = (instruction & 0x0f00) >> 8
+            y = (instruction & 0x00f0) >> 4
 
-        # Perform the subtraction
-        registers[x] = (registers[y] - registers[x]) & 0xff
+            if registers[x] == registers[y]:
+                pc += 2
 
-        # Set the carry flag after the calculation
-        # If VY > VX, set VF to 1 (no underflow), otherwise set VF to 0 (underflow)
-        if registers[y] > registers[x]:
-            registers[0xf] = 1
-        else:
+        # skip if value in 2 registers are not equal
+        elif instruction & 0xf00f == 0x9000:
+            x = (instruction & 0x0f00) >> 8
+            y = (instruction & 0x00f0) >> 4
+
+            if registers[x] != registers[y]:
+                pc += 2
+
+        # set value of one register to another
+        elif instruction & 0xf00f == 0x8000:
+            x = (instruction & 0x0f00) >> 8
+            y = (instruction & 0x00f0) >> 4
+
+            registers[x] = registers[y]
+
+        # binary OR
+        elif instruction & 0xf00f == 0x8001:
+            x = (instruction & 0x0f00) >> 8
+            y = (instruction & 0x00f0) >> 4
+
+            registers[x] = registers[x] | registers[y]
+
+            # reset flag
             registers[0xf] = 0
 
-    # shift to the left
-    elif instruction & 0xf00f == 0x800E:
-        x = (instruction & 0x0F00) >> 8
-        y = (instruction & 0x00F0) >> 4  # Add this line to get Y
-        
-        # Store the most significant bit in VF (carry flag)
-        registers[0xF] = (registers[y] & 0x80) >> 7
-        
-        # Store shifted value of VY in VX
-        registers[x] = (registers[y] << 1) & 0xFF
+        # binary AND
+        elif instruction & 0xf00f == 0x8002:
+            x = (instruction & 0x0f00) >> 8
+            y = (instruction & 0x00f0) >> 4
 
-    # jump with offset
-    elif instruction & 0xf000 == 0xb000:
-        address = instruction & 0x0fff
-        pc = address + registers[0]
+            registers[x] = registers[x] & registers[y]
 
-    # random number AND
-    elif instruction & 0xf000 == 0xc000:
-        x = (instruction & 0x0f00) >> 8
-        val = instruction & 0x00ff
-        random_num = (random.randint(0, 255)) & val 
+            # reset flag
+            registers[0xf] = 0
 
-        registers[x] = random_num
+        # logical XOR
+        elif instruction & 0xf00f == 0x8003:
+            x = (instruction & 0x0f00) >> 8
+            y = (instruction & 0x00f0) >> 4
 
-    # skip if key pressed
-    elif instruction & 0xf0ff == 0xe09e:
-        x = (instruction & 0x0f00) >> 8
-        key_value = registers[x]
-        keys = pygame.key.get_pressed()
-        
-        # Find the pygame key corresponding to the CHIP-8 key value
-        corresponding_pygame_key = None
-        for pygame_key, chip8_key in keyboard.items():
-            if chip8_key == key_value:
-                corresponding_pygame_key = pygame_key
-                break
-        
-        if corresponding_pygame_key and keys[corresponding_pygame_key]:
-            pc += 2
+            registers[x] = registers[x] ^ registers[y]
+
+            # reset flag
+            registers[0xf] = 0
+
+        # add value to register VX with overflow
+        elif instruction & 0xf00f == 0x8004:
+            x = (instruction & 0x0f00) >> 8
+            y = (instruction & 0x00f0) >> 4
+            val = instruction & 0x00ff
+            registers[x] = (registers[x] + registers[y])
+
+            if registers[x] > 0xff:
+                registers[0xf] = 1
+                registers[x] &= 0xff
+            else:
+                registers[0xf] = 0
+
+        # subtract value from two registers
+        elif instruction & 0xf00f == 0x8005:
+            x = (instruction & 0x0f00) >> 8
+            y = (instruction & 0x00f0) >> 4
+
+            vx = registers[x]
+            vy = registers[y]
+
+            # Perform the subtraction and store the result in vx
+            registers[x] = (vx - vy) & 0xff
+
+            # Set the carry flag to 0 if there is an underflow
+            if vx >= vy:
+                registers[0xf] = 1  # No underflow
+            else:
+                registers[0xf] = 0  # Underflow occurred        
+
+        # shift to the right
+        elif (instruction & 0xF00F) == 0x8006:
+            x = (instruction & 0x0F00) >> 8
+            y = (instruction & 0x00F0) >> 4  # Add this line to get Y
             
-    # skip if key not pressed
-    elif instruction & 0xf0ff == 0xe0a1:
-        x = (instruction & 0x0f00) >> 8
-        key_value = registers[x]
-        keys = pygame.key.get_pressed()
+            # Capture the least significant bit of VY before shifting
+            registers[0xF] = registers[y] & 0x1
+            
+            # Store shifted value of VY in VX
+            registers[x] = (registers[y] >> 1) & 0xFF
+
+        # subtract value from two registers
+        elif instruction & 0xf00f == 0x8007:
+            x = (instruction & 0x0f00) >> 8
+            y = (instruction & 0x00f0) >> 4
+
+            # Perform the subtraction
+            registers[x] = (registers[y] - registers[x]) & 0xff
+
+            # Set the carry flag after the calculation
+            # If VY > VX, set VF to 1 (no underflow), otherwise set VF to 0 (underflow)
+            if registers[y] > registers[x]:
+                registers[0xf] = 1
+            else:
+                registers[0xf] = 0
+
+        # shift to the left
+        elif instruction & 0xf00f == 0x800E:
+            x = (instruction & 0x0F00) >> 8
+            y = (instruction & 0x00F0) >> 4  # Add this line to get Y
+            
+            # Store the most significant bit in VF (carry flag)
+            registers[0xF] = (registers[y] & 0x80) >> 7
+            
+            # Store shifted value of VY in VX
+            registers[x] = (registers[y] << 1) & 0xFF
+
+        # jump with offset
+        elif instruction & 0xf000 == 0xb000:
+            address = instruction & 0x0fff
+            pc = address + registers[0]
+
+        # random number AND
+        elif instruction & 0xf000 == 0xc000:
+            x = (instruction & 0x0f00) >> 8
+            val = instruction & 0x00ff
+            random_num = (random.randint(0, 255)) & val 
+
+            registers[x] = random_num
+
+        # skip if key pressed
+        elif instruction & 0xf0ff == 0xe09e:
+            x = (instruction & 0x0f00) >> 8
+            key_value = registers[x]
+            keys = pygame.key.get_pressed()
+            
+            # Find the pygame key corresponding to the CHIP-8 key value
+            corresponding_pygame_key = None
+            for pygame_key, chip8_key in keyboard.items():
+                if chip8_key == key_value:
+                    corresponding_pygame_key = pygame_key
+                    break
+            
+            if corresponding_pygame_key and keys[corresponding_pygame_key]:
+                pc += 2
+                
+        # skip if key not pressed
+        elif instruction & 0xf0ff == 0xe0a1:
+            x = (instruction & 0x0f00) >> 8
+            key_value = registers[x]
+            keys = pygame.key.get_pressed()
+            
+            # Find the pygame key corresponding to the CHIP-8 key value
+            corresponding_pygame_key = None
+            for pygame_key, chip8_key in keyboard.items():
+                if chip8_key == key_value:
+                    corresponding_pygame_key = pygame_key
+                    break
+            
+            if not corresponding_pygame_key or not keys[corresponding_pygame_key]:
+                pc += 2
+
+        # set current value of delay timer
+        elif instruction & 0xf0ff == 0xf007:
+            x = (instruction & 0x0f00) >> 8 
+            registers[x] = delay_timer
         
-        # Find the pygame key corresponding to the CHIP-8 key value
-        corresponding_pygame_key = None
-        for pygame_key, chip8_key in keyboard.items():
-            if chip8_key == key_value:
-                corresponding_pygame_key = pygame_key
-                break
+        # set delay timer
+        elif instruction & 0xf0ff == 0xf015:
+            x = (instruction & 0x0f00) >> 8
+            delay_timer = registers[x]
+
+        # set sound timer
+        elif instruction & 0xf0ff == 0xf018:
+            x = (instruction & 0x0f00) >> 8
+            sound_timer = registers[x]
         
-        if not corresponding_pygame_key or not keys[corresponding_pygame_key]:
-            pc += 2
+        # add value to the index register
+        elif instruction & 0xf0ff == 0xf01e:
+            x = (instruction & 0x0f00) >> 8
+            I += registers[x]
 
-    # set current value of delay timer
-    elif instruction & 0xf0ff == 0xf007:
-        x = (instruction & 0x0f00) >> 8 
-        registers[x] = delay_timer
-    
-    # set delay timer
-    elif instruction & 0xf0ff == 0xf015:
-        x = (instruction & 0x0f00) >> 8
-        delay_timer = registers[x]
+        # block until key press
+        elif instruction & 0xf0ff == 0xf00a:
+            x = (instruction & 0x0f00) >> 8
+            keys = pygame.key.get_pressed()
 
-    # set sound timer
-    elif instruction & 0xf0ff == 0xf018:
-        x = (instruction & 0x0f00) >> 8
-        sound_timer = registers[x]
-    
-    # add value to the index register
-    elif instruction & 0xf0ff == 0xf01e:
-        x = (instruction & 0x0f00) >> 8
-        I += registers[x]
+            key_pressed = False
+            for pygame_key, chip8_key in keyboard.items():
+                if keys[pygame_key]:
+                    registers[x] = chip8_key
+                    key_pressed = True
+                    break
 
-    # block until key press
-    elif instruction & 0xf0ff == 0xf00a:
-        x = (instruction & 0x0f00) >> 8
-        keys = pygame.key.get_pressed()
-
-        key_pressed = False
-        for pygame_key, chip8_key in keyboard.items():
-            if keys[pygame_key]:
-                registers[x] = chip8_key
-                key_pressed = True
-                break
-
-        # If a key is pressed, wait until it is released
-        if key_pressed:
-            waiting_for_release = True
-            while waiting_for_release:
-                for event in pygame.event.get():
-                    if event.type == pygame.KEYUP:
-                        waiting_for_release = False
-        else:
-            pc -= 2  # Stay on the same instruction if no key is pressed
+            # If a key is pressed, wait until it is released
+            if key_pressed:
+                waiting_for_release = True
+                while waiting_for_release:
+                    for event in pygame.event.get():
+                        if event.type == pygame.KEYUP:
+                            waiting_for_release = False
+            else:
+                pc -= 2  # Stay on the same instruction if no key is pressed
 
 
-    # set I to a hex character
-    elif instruction & 0xf0ff == 0xf029:
-        x = (instruction & 0x0f00) >> 8
-        I = 0x50 + (registers[x] * 5)  # each sprite is 5 bytes long
+        # set I to a hex character
+        elif instruction & 0xf0ff == 0xf029:
+            x = (instruction & 0x0f00) >> 8
+            I = 0x50 + (registers[x] * 5)  # each sprite is 5 bytes long
 
-    # Binary coded decimal conversion
-    elif instruction & 0xf0ff == 0xf033:
-        x = (instruction & 0x0f00) >> 8
-        val = registers[x]
-        hundreds = val // 100
-        tens = (val // 10) % 10
-        ones = val % 10
-        memory[I] = hundreds
-        memory[I+1] = tens
-        memory[I+2] = ones
+        # Binary coded decimal conversion
+        elif instruction & 0xf0ff == 0xf033:
+            x = (instruction & 0x0f00) >> 8
+            val = registers[x]
+            hundreds = val // 100
+            tens = (val // 10) % 10
+            ones = val % 10
+            memory[I] = hundreds
+            memory[I+1] = tens
+            memory[I+2] = ones
 
-    # store memory
-    elif instruction & 0xf0ff == 0xf055:
-        x = (instruction & 0x0f00) >> 8
-        for i in range(x + 1): # loop through all the xth registers, x inclusive
-            val = registers[i]
-            memory[I + i] = val # store value in memory
-        
-        I = I + x + 1 # increment the index register
+        # store memory
+        elif instruction & 0xf0ff == 0xf055:
+            x = (instruction & 0x0f00) >> 8
+            for i in range(x + 1): # loop through all the xth registers, x inclusive
+                val = registers[i]
+                memory[I + i] = val # store value in memory
+            
+            I = I + x + 1 # increment the index register
 
-    # load from memory
-    elif instruction & 0xf0ff == 0xf065:
-        x = (instruction & 0x0f00) >> 8
-        for i in range(x + 1): # loop through all the xth registers, x inclusive
-            val = memory[I + i]
-            registers[i] = val
+        # load from memory
+        elif instruction & 0xf0ff == 0xf065:
+            x = (instruction & 0x0f00) >> 8
+            for i in range(x + 1): # loop through all the xth registers, x inclusive
+                val = memory[I + i]
+                registers[i] = val
 
-        I = I + x + 1 # increment the index register
+            I = I + x + 1 # increment the index register
 
 
     if delay_timer > 0:
