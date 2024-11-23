@@ -118,7 +118,7 @@ This project is open source and available under the MIT License.
 
 ## Contributing
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](link-to-your-issues-page) if you want to contribute.
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/Eusha425/chip8-emulator/issues) if you want to contribute.
 
 ---
 
