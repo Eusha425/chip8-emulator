@@ -61,7 +61,7 @@ keyboard = {
 }
 
 # loading the ROM contents into the memory
-with open("roms/5-quirks.ch8", "rb") as file:
+with open("roms/turnover77.ch8", "rb") as file:
     rom = file.read() # read all the binary data
 
     for i in range(len(rom)):
